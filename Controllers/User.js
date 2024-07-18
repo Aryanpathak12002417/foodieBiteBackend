@@ -9,7 +9,8 @@ const userStatus=require('../Model/UserStatus.js')
 const Otp=require('../Model/Otp.js')
 const generateOtp=require('../Utiles/generateOtp.js');
 const EmailServices=require('../Utiles/Emai.js');
-const Authotp=require('../Utiles/AuthOtp.js')
+const Authotp=require('../Utiles/AuthOtp.js');
+const sequelize = require('../Utiles/database.js');
 
 
 
@@ -20,7 +21,6 @@ router.post('/adminSignup',async (req,res)=>{
     const cpassword=await bcrypt.hash(password,10)
     console.log("The crypted password is: ",cpassword)
     
-
     User.create({
         
         first_name:firstName,
@@ -44,17 +44,7 @@ router.post('/adminSignup',async (req,res)=>{
 
         }
         catch(err){
-            console.log(err)
-            User.destroy({
-                where:{
-                    user_id
-                }
-            }).then((err)=>{
-                console.log("User state deleted")
-                res.status(400).json({"msg":"There is error in the system"})
-            }).catch(err=>{
-                console.log('Need to manually delete user with user id: ',user_id);
-            })
+            res.status(400).json({"msg":"Something went wrong"})
         }
 
     }).catch((err)=>{
@@ -77,61 +67,65 @@ router.post('/adminSignup',async (req,res)=>{
 
 router.post('/signup',async (req,res)=>{
 
-    const {firstName,lastName,email,password,phoneNumber}=req.body;
+    const t = await sequelize.transaction()
+
+try{
+    const {
+        firstName,
+        lastName,
+        email,
+        password,
+        address,
+        state,
+        city,
+        pincode,
+        dateOfBirth ,
+        gender,
+        breakFastTime,
+        lunchTime,
+        dinnerTime
+        }=req.body;
+
     const cpassword=await bcrypt.hash(password,10)
     console.log("The crypted password is: ",cpassword)
     
-
-    User.create({
+    const userData = await User.create({
         
         first_name:firstName,
         last_name:lastName,
         email:email,
-        phone_number:phoneNumber,
-        password:cpassword
+        password:cpassword,
+        dateOfBirth,
+        gender
 
-    }).then((data)=>{
-        
-
-        console.log('User data store successfully')
-        console.log(data)
-        const user_id=data.dataValues.user_id
-        console.log("User id :",user_id)
-        try{
-
-            const token=jwt.sign({user_id},process.env.SECRET_KEY)
-            res.cookie('Token',token);
-            res.status(200).json({"msg":"User created successfully"})
-
-        }
-        catch(err){
-            console.log(err)
-            User.destroy({
-                where:{
-                    user_id
-                }
-            }).then((err)=>{
-                console.log("User state deleted")
-                res.status(400).json({"msg":"There is error in the system"})
-            }).catch(err=>{
-                console.log('Need to manually delete user with user id: ',user_id);
-            })
-        }
-
-    }).catch((err)=>{
-
-        console.log(err.original)
-        if(err.original && err.original.sqlMessage && err.original.sqlMessage.includes('Duplicate entry')){
-            
-            err.fields.phone_number?
-            res.status(400).json({msg:"Phone Number already exist"})
-            :res.status(400).json({msg:"Email id already exist"})
-        }
-        else{
-            res.status(400).json({"msg":"Pease try again later"});
-        }
-
+    },{
+        transaction:t
     })
+
+    const user_id=userData.dataValues.user_id
+
+    await userInformation.create({
+        user_id,
+        address,
+        city,
+        state,
+        pincode,
+        preffBrkfastHrs:breakFastTime,
+        preffLunchHrs:lunchTime,
+        preffDinnerHrs:dinnerTime
+    },{
+        transaction:t
+    })
+
+    await t.commit()
+    res.status(201).json({msg:"Signup successfully"})
+}
+catch(err){
+    await t.rollback()
+    console.log("The error is:- ", err)
+    res.status(400).json({msg:"There is error while creating user"})
+}
+
 
 })
 
@@ -249,7 +243,7 @@ router.post('/send-otp',async(req,res)=>{
 })
 
 
-router.post('/verify-otp',Authotp,async(req,res)=>{
+router.post('/verify-otp',async(req,res)=>{
 
     try{
 

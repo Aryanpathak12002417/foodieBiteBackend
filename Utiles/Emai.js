@@ -5,18 +5,26 @@ class SimpleMailTransferProtocol{
 
   constructor(){
 
-    this.transporter=nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
-      auth: {
-        user:process.env.SENDER_EMAIL,
-        pass:process.env.SENDER_EMAIL_PASSWORD,
+    console.log("Setting up email")
+    try{
+      this.transporter=nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true,
+        auth: {
+          type: "OAuth2",
+          clientId: process.env.CLIENTID,
+          clientSecret: process.env.CLIENT_SECRET,
+        },
+      });
+    }
+      catch(Err){
+        console.log(err)
       }
-    })
+  
+      console.log("sendig email")
+    }
 
-
-  }
 
 
   async orderPlaced(recieverEmail,recieverName,orderDate,orderId){
@@ -65,7 +73,7 @@ class SimpleMailTransferProtocol{
   }
 
   async sendOtp(recieverEmail,otp){
-
+    console.log("Reciver Email is ",recieverEmail)
     const mailOptions = {
       from: process.env.SENDER_EMAIL,
       to: recieverEmail,

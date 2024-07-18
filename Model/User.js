@@ -14,7 +14,6 @@ const User=sequelize.define('User',{
         primaryKey:true
 
     },
-    
     first_name:{
 
         type:Sequelize.STRING(50),
@@ -33,21 +32,26 @@ const User=sequelize.define('User',{
         type:Sequelize.STRING(50),
         required:true,
         unique:true
-
     },
 
-    phone_number:{
+    // phone_number:{
 
-        type:Sequelize.STRING,
-        required:true,
-        unique:true
+    //     type:Sequelize.STRING,
+    //     required:true,
+    //     unique:true
 
-    },
+    // },
     password:{
 
         type:Sequelize.STRING,
         required:true
 
+    },
+    gender:{
+        type:Sequelize.ENUM("M","F")
+    },
+    dateOfBirth:{
+        type:Sequelize.DATE
     }
 
 })
